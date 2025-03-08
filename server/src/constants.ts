@@ -35,7 +35,7 @@ export interface JSONColorTokenSettings {
 export const defaultSettings: JSONColorTokenSettings = {
 	maxNumberOfColorTokens: 1000,
 	colorTokenCasing: "Uppercase",
-	languages: ["json", "jsonc"],
+	languages: ["json", "jsonc", "cpp", "c++"],
 	cssLanguages: ["css", "less"]
 };
 
@@ -44,6 +44,9 @@ export const defaultSettings: JSONColorTokenSettings = {
  */
 export const colorTokenPattern = /#([0-9a-fA-F]{6}([0-9a-fA-F]{2})?|[0-9a-fA-F]{3}([0-9a-fA-F]{1})?)/g;
 // export const colorTokenPattern = /#[0-9a-fA-F]{6}([0-9]{2})?/g;
+
+// RGB array pattern for C++ files in the format {r,g,b} where r,g,b are integers from 0-255
+export const rgbArrayPattern = /\{(\s*)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\s*),(\s*)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\s*),(\s*)(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\s*)\}/g;
 
 export const cssVariablePattern = /var\(--(?<cssVar>[a-zA-Z0-9\-]+)\)/g;
 

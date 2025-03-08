@@ -1,6 +1,6 @@
 # JSON color token
 
-This repo implements a language server for VSCode. The language server can be installed as an extension. The extension enables hex color token detection in JSON files, provides color preview and color editing through the built-in color picker.
+This repo implements a language server for VSCode. The language server can be installed as an extension. The extension enables hex color token detection in JSON files and RGB array detection in C++ files. It provides color preview and color editing through the built-in color picker.
 
 ## Example
 
@@ -21,11 +21,20 @@ If referenced in a css file, the referenced variables will show the color previe
 
 ![rendererd-sample-css](https://raw.githubusercontent.com/YECHUNAN/json-color-token/f0aa8b63417144abf99fcff37edada1e54e8dc96/images/readme-sample-css.jpg)
 
+Additionally, RGB array color definitions in C++ files are now supported:
+
+```cpp
+const int RED[] = {255, 0, 0};
+const int GREEN[] = {0, 255, 0};
+setColor({128, 128, 128}); // Medium gray
+```
+
 ## Features
 
 - Preview visual color from hex color tokens in json files.
+- Preview visual color from RGB arrays in C++ files in format `{r,g,b}` where r, g, b are integers between 0-255.
 - Cache variables in opened json files that are like color tokens and preview them in referenced css/less files.
-- Adjust color using the built-in color picker in json files.
+- Adjust color using the built-in color picker in json files and C++ files.
 
 ## External credits
 

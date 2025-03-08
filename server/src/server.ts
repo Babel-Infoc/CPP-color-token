@@ -28,6 +28,7 @@ import {
 	JSONColorTokenSettings,
 	defaultSettings,
 	colorTokenPattern,
+	rgbArrayPattern,
 	cssVariablePattern,
 	jsonKeyPattern,
 	maxNumberOfColorTokensNotificationNamespace
@@ -153,29 +154,32 @@ async function updateColorTokenCache(textDocument: TextDocument): Promise<void> 
 	if (await isColorLanguage(textDocument.languageId)) {
 		let text = textDocument.getText();
 		try {
-			let jsonObj = JSON.parse(text);
-			let colorTokenObj: {
-				[variable: string]: {
-					color: string,
-					range: Range
+			// Only try to parse JSON for JSON languages
+			if (textDocument.languageId === "json" || textDocument.languageId === "jsonc") {
+				let jsonObj = JSON.parse(text);
+				let colorTokenObj: {
+					[variable: string]: {
+						color: string,
+						range: Range
+					}
+				} = {};
+				const regex = new RegExp(jsonKeyPattern);
+				let m: RegExpExecArray | null;
+				while ((m = regex.exec(text))) {
+					const variableName = m.groups?.varDoulbeQuote ?? m.groups?.varSingleQuote;
+					if (!!variableName && isColorToken(jsonObj[variableName])) {
+						colorTokenObj[variableName] = {
+							color: jsonObj[variableName],
+							range: {
+								start: textDocument.positionAt(m.index),
+								end: textDocument.positionAt(m.index + variableName.length)
+							}
+						};
+					}
 				}
-			} = {};
-			const regex = new RegExp(jsonKeyPattern);
-			let m: RegExpExecArray | null;
-			while ((m = regex.exec(text))) {
-				const variableName = m.groups?.varDoulbeQuote ?? m.groups?.varSingleQuote;
-				if (!!variableName && isColorToken(jsonObj[variableName])) {
-					colorTokenObj[variableName] = {
-						color: jsonObj[variableName],
-						range: {
-							start: textDocument.positionAt(m.index),
-							end: textDocument.positionAt(m.index + variableName.length)
-						}
-					};
-				}
-			}
 
-			colorTokenCache[textDocument.uri] = colorTokenObj;
+				colorTokenCache[textDocument.uri] = colorTokenObj;
+			}
 		} catch (error) {
 			// Swallow the error
 		}
@@ -190,6 +194,7 @@ async function findColorTokens(textDocument: TextDocument): Promise<IColors[]> {
 
 	let colors: IColors[] = [];
 	if (await isColorLanguage(textDocument.languageId)) {
+		// Process standard hex color tokens
 		let regex = new RegExp(colorTokenPattern);
 		let m: RegExpExecArray | null;
 		let numTokens = 0;
@@ -205,7 +210,35 @@ async function findColorTokens(textDocument: TextDocument): Promise<IColors[]> {
 				},
 				color: color
 			});
+			}
+
+		// Process RGB arrays in CPP files
+		if (textDocument.languageId === "cpp" || textDocument.languageId === "c++") {
+			let rgbRegex = new RegExp(rgbArrayPattern);
+			let rgbMatch: RegExpExecArray | null;
+
+			while ((rgbMatch = rgbRegex.exec(text)) && numTokens < maxNumberOfColorTokens) {
+				numTokens++;
+
+				// Extract the RGB values from the match
+				// The pattern captures r, g, b values in capture groups 2, 5, and 8
+				const r = parseInt(rgbMatch[2], 10);
+				const g = parseInt(rgbMatch[5], 10);
+				const b = parseInt(rgbMatch[8], 10);
+
+				// Convert to hex format for internal processing
+				const hexColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+
+				colors.push({
+					range: {
+						start: textDocument.positionAt(rgbMatch.index),
+						end: textDocument.positionAt(rgbMatch.index + rgbMatch[0].length)
+					},
+					color: hexColor
+				});
+			}
 		}
+
 		// If max number of color token is reached, show an info notification
 		// and don't show this notification until a predefined amout of time has passed.
 		if (numTokens === maxNumberOfColorTokens) {
@@ -235,8 +268,8 @@ async function findColorTokens(textDocument: TextDocument): Promise<IColors[]> {
 
 /**
  * Convert a short hex code to its equivalent full hex code.
- * 
- * @example 
+ *
+ * @example
  * convertShortHexCodeToFullHexCode("#f00") // returns "#ff0000"
  * convertShortHexCodeToFullHexCode("#f00a") // returns "#ff0000aa"
  */
@@ -287,6 +320,16 @@ function stringifyColor(color: Color, casing: "Uppercase" | "Lowercase"): string
 	return result;
 }
 
+/**
+ * Converts a color to RGB array format for CPP files: {r,g,b}
+ */
+function colorToRgbArray(color: Color): string {
+	const r = Math.floor(color.red * 255);
+	const g = Math.floor(color.green * 255);
+	const b = Math.floor(color.blue * 255);
+	return `{${r},${g},${b}}`;
+}
+
 // For color token variables referenced in css/less files,
 // go to definition will bring to the json file where the token is defined.
 connection.onDefinition(async (params: DefinitionParams): Promise<Definition | undefined> => {
@@ -335,8 +378,19 @@ connection.onDocumentColor(async (params: DocumentColorParams): Promise<ColorInf
 
 connection.onColorPresentation(async (params: ColorPresentationParams): Promise<ColorPresentation[]> => {
 	const document = documents.get(params.textDocument.uri);
-	if (!!document && (await isColorLanguage(document.languageId))) {
+	if (!document) {
+		return [];
+	}
+
+	if (await isColorLanguage(document.languageId)) {
 		let settings = await getGlobalSettings();
+
+		// For CPP files, return the RGB array format
+		if (document.languageId === "cpp" || document.languageId === "c++") {
+			return [{ label: colorToRgbArray(params.color) }];
+		}
+
+		// For other supported formats, use hex format
 		return [{ label: stringifyColor(params.color, settings.colorTokenCasing) }];
 	}
 	return [];

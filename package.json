@@ -1,6 +1,6 @@
 {
 	"name": "json-color-token",
-	"description": "A language server that enables previewing/editing hex color tokens in json documents",
+	"description": "A language server that enables previewing/editing hex color tokens in json documents and RGB arrays in cpp files",
 	"icon": "images/icon.png",
 	"repository": {
 		"type": "git",
@@ -8,7 +8,7 @@
 	},
 	"author": "Chunan Ye",
 	"license": "MIT",
-	"version": "1.3.3",
+	"version": "1.3.4",
 	"publisher": "yechunan",
 	"categories": [
 		"Visualization"
@@ -47,7 +47,9 @@
 					"type": "array",
 					"default": [
 						"json",
-						"jsonc"
+						"jsonc",
+						"cpp",
+						"c++"
 					],
 					"description": "Languages for which to search for color tokens. This setting is mutually exclusive with languages set as 'cssLanguages'. \n\nThe extension must be restarted for an updated set of languages to take effect."
 				},
